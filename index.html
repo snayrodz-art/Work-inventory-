@@ -1,527 +1,67 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>CSI Biweekly Inventory</title>
 <style>
-:root{--blue:#163a63;--light:#eef4fa;--border:#d7dee7;--red:#b42318;--green:#067647}
-*{box-sizing:border-box} body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;background:#f7f8fa;color:#17202a}
+:root{--blue:#163a63;--light:#eef4fa;--border:#d7dee7;--red:#b42318;--green:#067647;--bg:#f7f8fa}
+*{box-sizing:border-box} body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;background:var(--bg);color:#17202a}
 header{background:var(--blue);color:white;padding:22px 18px} header h1{margin:0;font-size:24px} header p{margin:6px 0 0;opacity:.85}
 main{max-width:980px;margin:auto;padding:16px} .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
 .card{background:white;border:1px solid var(--border);border-radius:14px;padding:14px} .big{font-size:24px;font-weight:700}
-.controls{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0} input,select,button,textarea{font:inherit} input[type=search],select{padding:12px;border:1px solid var(--border);border-radius:10px;background:white;min-height:44px}
-input[type=search]{flex:1;min-width:200px} button{border:0;border-radius:10px;padding:11px 14px;cursor:pointer;background:var(--blue);color:white;font-weight:600}
-button.secondary{background:white;color:var(--blue);border:1px solid var(--border)} .item{background:white;border:1px solid var(--border);border-radius:12px;padding:12px;margin:8px 0}
-.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap} .name{flex:1;min-width:210px;font-weight:650} .meta{font-size:12px;color:#667085;margin-top:3px}
-.qty{width:78px;padding:9px;border:1px solid var(--border);border-radius:8px;text-align:center} .order{display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:8px;background:#f8fafc}
-.order.yes{background:#fff1f0;color:var(--red);font-weight:650} .notes{width:100%;margin-top:9px;padding:9px;border:1px solid var(--border);border-radius:8px}
-.cat{margin:22px 0 8px;font-size:17px;color:var(--blue)} .hidden{display:none} #toast{color:var(--green);font-weight:650;margin:8px 0}
-@media(max-width:600px){.summary{grid-template-columns:1fr 1fr} .summary .card:last-child{grid-column:1/-1} header h1{font-size:21px}}
-@media print{header,.controls,#finish,#toast{display:none!important} body{background:white} main{max-width:none} .item{break-inside:avoid}}
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0} input,select,button,textarea{font:inherit} input[type=search],select,.field{padding:12px;border:1px solid var(--border);border-radius:10px;background:white;min-height:44px}
+input[type=search]{flex:1;min-width:200px} button{border:0;border-radius:10px;padding:11px 14px;cursor:pointer;background:var(--blue);color:white;font-weight:650;min-height:44px}
+button.secondary{background:white;color:var(--blue);border:1px solid var(--border)} button.danger{background:white;color:var(--red);border:1px solid #f1b7b2} button.small{padding:8px 10px;min-height:38px}
+.item{background:white;border:1px solid var(--border);border-radius:12px;padding:12px;margin:8px 0} .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap} .name{flex:1;min-width:210px;font-weight:650} .meta{font-size:12px;color:#667085;margin-top:3px}
+.qty{width:78px;padding:9px;border:1px solid var(--border);border-radius:8px;text-align:center;font-size:16px} .order{display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:8px;background:#f8fafc}
+.order.yes{background:#fff1f0;color:var(--red);font-weight:650} .notes{width:100%;margin-top:9px;padding:9px;border:1px solid var(--border);border-radius:8px;font-size:16px}
+.cat{margin:22px 0 8px;font-size:17px;color:var(--blue)} #toast{color:var(--green);font-weight:650;margin:8px 0} .hidden{display:none!important}
+.manager{background:#fff;border:2px solid var(--blue);border-radius:14px;padding:14px;margin:12px 0} .manager h2{margin:0 0 5px;color:var(--blue);font-size:20px} .manager p{margin:0 0 12px;color:#667085;font-size:14px}
+.formgrid{display:grid;grid-template-columns:2fr 2fr 1fr 1fr;gap:8px} .field{width:100%;font-size:16px} .manager-actions,.item-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px} .item-actions{display:none} body.manage-mode .item-actions{display:flex}
+@media(max-width:700px){.summary{grid-template-columns:1fr 1fr} .summary .card:last-child{grid-column:1/-1} .formgrid{grid-template-columns:1fr 1fr}}
+@media(max-width:460px){.formgrid{grid-template-columns:1fr} header h1{font-size:21px}}
+@media print{header,.controls,#finish,#toast,#manager,.item-actions{display:none!important} body{background:white} main{max-width:none} .item{break-inside:avoid}}
 </style></head><body>
 <header><h1>CSI Biweekly Inventory</h1><p>Master Inventory List • editable every two weeks</p></header>
 <main>
-<div class="summary"><div class="card"><div>Inventory items</div><div id="total" class="big">120</div></div><div class="card"><div>Need ordering</div><div id="needed" class="big">6</div></div><div class="card"><div>Last checked</div><div id="last" class="big" style="font-size:17px">Not yet</div><div id="next" class="meta"></div></div></div>
-<div class="controls"><input id="search" type="search" placeholder="Search inventory…"><select id="filter"><option value="all">All categories</option></select><label class="order"><input id="only" type="checkbox"> Needs ordering only</label><button id="print" class="secondary">Print / Save PDF</button></div>
-<div id="toast"></div><noscript><div class="card" style="margin-bottom:12px">Your inventory is displayed below. For editable saved quantities and dates, open this file in Safari or another browser that allows local webpage scripts.</div></noscript><div id="list"><section class="inventory-group" data-category="Kitchen &amp; Cleaning"><h2 class="cat">Kitchen &amp; Cleaning</h2><div class="item static-item" data-name="dish soap" data-cat="Kitchen &amp; Cleaning">
-<div class="row"><div class="name">Dish Soap<div class="meta">bottles</div></div>
-<input class="qty" data-id="1" data-type="qty" value="1" aria-label="Quantity for Dish Soap">
-<label class="order "><input type="checkbox" data-id="1" data-type="order" > Order?</label></div>
-<input class="notes" data-id="1" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="hand soap" data-cat="Kitchen &amp; Cleaning">
-<div class="row"><div class="name">Hand Soap<div class="meta">bottles</div></div>
-<input class="qty" data-id="2" data-type="qty" value="10" aria-label="Quantity for Hand Soap">
-<label class="order "><input type="checkbox" data-id="2" data-type="order" > Order?</label></div>
-<input class="notes" data-id="2" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="paper towels" data-cat="Kitchen &amp; Cleaning">
-<div class="row"><div class="name">Paper Towels<div class="meta">rolls</div></div>
-<input class="qty" data-id="3" data-type="qty" value="6" aria-label="Quantity for Paper Towels">
-<label class="order "><input type="checkbox" data-id="3" data-type="order" > Order?</label></div>
-<input class="notes" data-id="3" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="trash bags" data-cat="Kitchen &amp; Cleaning">
-<div class="row"><div class="name">Trash bags<div class="meta">rolls</div></div>
-<input class="qty" data-id="4" data-type="qty" value="3" aria-label="Quantity for Trash bags">
-<label class="order "><input type="checkbox" data-id="4" data-type="order" > Order?</label></div>
-<input class="notes" data-id="4" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="napkins" data-cat="Kitchen &amp; Cleaning">
-<div class="row"><div class="name">Napkins<div class="meta">sleeves</div></div>
-<input class="qty" data-id="5" data-type="qty" value="2" aria-label="Quantity for Napkins">
-<label class="order "><input type="checkbox" data-id="5" data-type="order" > Order?</label></div>
-<input class="notes" data-id="5" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="disinfectant sheets" data-cat="Kitchen &amp; Cleaning">
-<div class="row"><div class="name">Disinfectant Sheets<div class="meta">Bottles</div></div>
-<input class="qty" data-id="6" data-type="qty" value="3" aria-label="Quantity for Disinfectant Sheets">
-<label class="order "><input type="checkbox" data-id="6" data-type="order" > Order?</label></div>
-<input class="notes" data-id="6" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="donut shop coffee" data-cat="Kitchen &amp; Cleaning">
-<div class="row"><div class="name">Donut Shop Coffee<div class="meta">boxes</div></div>
-<input class="qty" data-id="7" data-type="qty" value="4" aria-label="Quantity for Donut Shop Coffee">
-<label class="order "><input type="checkbox" data-id="7" data-type="order" > Order?</label></div>
-<input class="notes" data-id="7" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="starbucks dark roast coffee" data-cat="Kitchen &amp; Cleaning">
-<div class="row"><div class="name">Starbucks Dark Roast Coffee<div class="meta">boxes</div></div>
-<input class="qty" data-id="8" data-type="qty" value="4" aria-label="Quantity for Starbucks Dark Roast Coffee">
-<label class="order "><input type="checkbox" data-id="8" data-type="order" > Order?</label></div>
-<input class="notes" data-id="8" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="green mountain decaf coffee" data-cat="Kitchen &amp; Cleaning">
-<div class="row"><div class="name">Green Mountain Decaf Coffee<div class="meta">boxes</div></div>
-<input class="qty" data-id="9" data-type="qty" value="4" aria-label="Quantity for Green Mountain Decaf Coffee">
-<label class="order "><input type="checkbox" data-id="9" data-type="order" > Order?</label></div>
-<input class="notes" data-id="9" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="black tea" data-cat="Kitchen &amp; Cleaning">
-<div class="row"><div class="name">Black Tea<div class="meta">boxes</div></div>
-<input class="qty" data-id="10" data-type="qty" value="2" aria-label="Quantity for Black Tea">
-<label class="order "><input type="checkbox" data-id="10" data-type="order" > Order?</label></div>
-<input class="notes" data-id="10" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="early grey black tea" data-cat="Kitchen &amp; Cleaning">
-<div class="row"><div class="name">Early Grey Black Tea<div class="meta">boxes</div></div>
-<input class="qty" data-id="11" data-type="qty" value="2" aria-label="Quantity for Early Grey Black Tea">
-<label class="order "><input type="checkbox" data-id="11" data-type="order" > Order?</label></div>
-<input class="notes" data-id="11" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="english breakfast tea" data-cat="Kitchen &amp; Cleaning">
-<div class="row"><div class="name">English Breakfast TEA<div class="meta">boxes</div></div>
-<input class="qty" data-id="12" data-type="qty" value="2" aria-label="Quantity for English Breakfast TEA">
-<label class="order "><input type="checkbox" data-id="12" data-type="order" > Order?</label></div>
-<input class="notes" data-id="12" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="english breakfast decaf tea" data-cat="Kitchen &amp; Cleaning">
-<div class="row"><div class="name">English Breakfast Decaf Tea<div class="meta">boxes</div></div>
-<input class="qty" data-id="13" data-type="qty" value="2" aria-label="Quantity for English Breakfast Decaf Tea">
-<label class="order "><input type="checkbox" data-id="13" data-type="order" > Order?</label></div>
-<input class="notes" data-id="13" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="herbal tea pure peppermint" data-cat="Kitchen &amp; Cleaning">
-<div class="row"><div class="name">Herbal Tea Pure Peppermint<div class="meta">boxes</div></div>
-<input class="qty" data-id="14" data-type="qty" value="2" aria-label="Quantity for Herbal Tea Pure Peppermint">
-<label class="order "><input type="checkbox" data-id="14" data-type="order" > Order?</label></div>
-<input class="notes" data-id="14" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="green tea" data-cat="Kitchen &amp; Cleaning">
-<div class="row"><div class="name">Green Tea<div class="meta">boxes</div></div>
-<input class="qty" data-id="15" data-type="qty" value="0" aria-label="Quantity for Green Tea">
-<label class="order yes"><input type="checkbox" data-id="15" data-type="order" checked> Order?</label></div>
-<input class="notes" data-id="15" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="coffee stirrers" data-cat="Kitchen &amp; Cleaning">
-<div class="row"><div class="name">Coffee Stirrers<div class="meta">boxes</div></div>
-<input class="qty" data-id="16" data-type="qty" value="3" aria-label="Quantity for Coffee Stirrers">
-<label class="order "><input type="checkbox" data-id="16" data-type="order" > Order?</label></div>
-<input class="notes" data-id="16" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="sugar" data-cat="Kitchen &amp; Cleaning">
-<div class="row"><div class="name">Sugar<div class="meta">boxes</div></div>
-<input class="qty" data-id="17" data-type="qty" value="1" aria-label="Quantity for Sugar">
-<label class="order "><input type="checkbox" data-id="17" data-type="order" > Order?</label></div>
-<input class="notes" data-id="17" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="splenda" data-cat="Kitchen &amp; Cleaning">
-<div class="row"><div class="name">Splenda<div class="meta">boxes</div></div>
-<input class="qty" data-id="18" data-type="qty" value="2" aria-label="Quantity for Splenda">
-<label class="order "><input type="checkbox" data-id="18" data-type="order" > Order?</label></div>
-<input class="notes" data-id="18" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="sweet n low" data-cat="Kitchen &amp; Cleaning">
-<div class="row"><div class="name">Sweet N Low<div class="meta">boxes</div></div>
-<input class="qty" data-id="19" data-type="qty" value="2" aria-label="Quantity for Sweet N Low">
-<label class="order "><input type="checkbox" data-id="19" data-type="order" > Order?</label></div>
-<input class="notes" data-id="19" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="stevia" data-cat="Kitchen &amp; Cleaning">
-<div class="row"><div class="name">Stevia<div class="meta">boxes</div></div>
-<input class="qty" data-id="20" data-type="qty" value="2" aria-label="Quantity for Stevia">
-<label class="order "><input type="checkbox" data-id="20" data-type="order" > Order?</label></div>
-<input class="notes" data-id="20" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="salt and pepper" data-cat="Kitchen &amp; Cleaning">
-<div class="row"><div class="name">Salt and Pepper<div class="meta">Shakers</div></div>
-<input class="qty" data-id="21" data-type="qty" value="2" aria-label="Quantity for Salt and Pepper">
-<label class="order "><input type="checkbox" data-id="21" data-type="order" > Order?</label></div>
-<input class="notes" data-id="21" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="french vanilla creamer" data-cat="Kitchen &amp; Cleaning">
-<div class="row"><div class="name">French Vanilla Creamer<div class="meta">boxes</div></div>
-<input class="qty" data-id="22" data-type="qty" value="2" aria-label="Quantity for French Vanilla Creamer">
-<label class="order "><input type="checkbox" data-id="22" data-type="order" > Order?</label></div>
-<input class="notes" data-id="22" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="original creamer" data-cat="Kitchen &amp; Cleaning">
-<div class="row"><div class="name">Original Creamer<div class="meta">boxes</div></div>
-<input class="qty" data-id="23" data-type="qty" value="3" aria-label="Quantity for Original Creamer">
-<label class="order "><input type="checkbox" data-id="23" data-type="order" > Order?</label></div>
-<input class="notes" data-id="23" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="plastic forks" data-cat="Kitchen &amp; Cleaning">
-<div class="row"><div class="name">Plastic Forks<div class="meta">boxes</div></div>
-<input class="qty" data-id="24" data-type="qty" value="2" aria-label="Quantity for Plastic Forks">
-<label class="order "><input type="checkbox" data-id="24" data-type="order" > Order?</label></div>
-<input class="notes" data-id="24" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="plastic spoons" data-cat="Kitchen &amp; Cleaning">
-<div class="row"><div class="name">Plastic Spoons<div class="meta">boxes</div></div>
-<input class="qty" data-id="25" data-type="qty" value="2" aria-label="Quantity for Plastic Spoons">
-<label class="order "><input type="checkbox" data-id="25" data-type="order" > Order?</label></div>
-<input class="notes" data-id="25" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="plastic knives" data-cat="Kitchen &amp; Cleaning">
-<div class="row"><div class="name">Plastic Knives<div class="meta">boxes</div></div>
-<input class="qty" data-id="26" data-type="qty" value="1" aria-label="Quantity for Plastic Knives">
-<label class="order "><input type="checkbox" data-id="26" data-type="order" > Order?</label></div>
-<input class="notes" data-id="26" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="paper plates" data-cat="Kitchen &amp; Cleaning">
-<div class="row"><div class="name">Paper Plates<div class="meta">sleeves</div></div>
-<input class="qty" data-id="27" data-type="qty" value="7" aria-label="Quantity for Paper Plates">
-<label class="order "><input type="checkbox" data-id="27" data-type="order" > Order?</label></div>
-<input class="notes" data-id="27" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="paper bowls" data-cat="Kitchen &amp; Cleaning">
-<div class="row"><div class="name">Paper Bowls<div class="meta">sleeves</div></div>
-<input class="qty" data-id="28" data-type="qty" value="2" aria-label="Quantity for Paper Bowls">
-<label class="order "><input type="checkbox" data-id="28" data-type="order" > Order?</label></div>
-<input class="notes" data-id="28" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="paper cups" data-cat="Kitchen &amp; Cleaning">
-<div class="row"><div class="name">Paper Cups<div class="meta">sleeves</div></div>
-<input class="qty" data-id="29" data-type="qty" value="2" aria-label="Quantity for Paper Cups">
-<label class="order yes"><input type="checkbox" data-id="29" data-type="order" checked> Order?</label></div>
-<input class="notes" data-id="29" data-type="notes" value="" placeholder="Notes / what is needed…"></div></section><section class="inventory-group" data-category="First Aid"><h2 class="cat">First Aid</h2><div class="item static-item" data-name="alcohol pads" data-cat="First Aid">
-<div class="row"><div class="name">Alcohol Pads<div class="meta">boxes</div></div>
-<input class="qty" data-id="30" data-type="qty" value="1" aria-label="Quantity for Alcohol Pads">
-<label class="order "><input type="checkbox" data-id="30" data-type="order" > Order?</label></div>
-<input class="notes" data-id="30" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="antacids" data-cat="First Aid">
-<div class="row"><div class="name">Antacids<div class="meta">bottles</div></div>
-<input class="qty" data-id="31" data-type="qty" value="1" aria-label="Quantity for Antacids">
-<label class="order "><input type="checkbox" data-id="31" data-type="order" > Order?</label></div>
-<input class="notes" data-id="31" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="antibiotic ointment" data-cat="First Aid">
-<div class="row"><div class="name">Antibiotic Ointment<div class="meta">tubes</div></div>
-<input class="qty" data-id="32" data-type="qty" value="1" aria-label="Quantity for Antibiotic Ointment">
-<label class="order "><input type="checkbox" data-id="32" data-type="order" > Order?</label></div>
-<input class="notes" data-id="32" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="band-aids" data-cat="First Aid">
-<div class="row"><div class="name">Band-aids<div class="meta">boxes</div></div>
-<input class="qty" data-id="33" data-type="qty" value="1" aria-label="Quantity for Band-aids">
-<label class="order "><input type="checkbox" data-id="33" data-type="order" > Order?</label></div>
-<input class="notes" data-id="33" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="guaze pads" data-cat="First Aid">
-<div class="row"><div class="name">Guaze Pads<div class="meta">boxes</div></div>
-<input class="qty" data-id="34" data-type="qty" value="1" aria-label="Quantity for Guaze Pads">
-<label class="order "><input type="checkbox" data-id="34" data-type="order" > Order?</label></div>
-<input class="notes" data-id="34" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="cotton squares" data-cat="First Aid">
-<div class="row"><div class="name">Cotton Squares<div class="meta">bags</div></div>
-<input class="qty" data-id="35" data-type="qty" value="1" aria-label="Quantity for Cotton Squares">
-<label class="order "><input type="checkbox" data-id="35" data-type="order" > Order?</label></div>
-<input class="notes" data-id="35" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="cotton swabs" data-cat="First Aid">
-<div class="row"><div class="name">Cotton Swabs<div class="meta">boxes</div></div>
-<input class="qty" data-id="36" data-type="qty" value="1" aria-label="Quantity for Cotton Swabs">
-<label class="order "><input type="checkbox" data-id="36" data-type="order" > Order?</label></div>
-<input class="notes" data-id="36" data-type="notes" value="" placeholder="Notes / what is needed…"></div></section><section class="inventory-group" data-category="Paper, Filing, and Envelopes"><h2 class="cat">Paper, Filing, and Envelopes</h2><div class="item static-item" data-name="letter sized copy paper - 8.5x11" data-cat="Paper, Filing, and Envelopes">
-<div class="row"><div class="name">Letter Sized Copy Paper - 8.5x11<div class="meta">reams</div></div>
-<input class="qty" data-id="37" data-type="qty" value="5" aria-label="Quantity for Letter Sized Copy Paper - 8.5x11">
-<label class="order yes"><input type="checkbox" data-id="37" data-type="order" checked> Order?</label></div>
-<input class="notes" data-id="37" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="legal sized copy paper - 8.5x14" data-cat="Paper, Filing, and Envelopes">
-<div class="row"><div class="name">Legal Sized Copy Paper - 8.5x14<div class="meta">reams</div></div>
-<input class="qty" data-id="38" data-type="qty" value="5" aria-label="Quantity for Legal Sized Copy Paper - 8.5x14">
-<label class="order yes"><input type="checkbox" data-id="38" data-type="order" checked> Order?</label></div>
-<input class="notes" data-id="38" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="ledger copy paper - 8.5x17" data-cat="Paper, Filing, and Envelopes">
-<div class="row"><div class="name">Ledger Copy Paper - 8.5x17<div class="meta">reams</div></div>
-<input class="qty" data-id="39" data-type="qty" value="6" aria-label="Quantity for Ledger Copy Paper - 8.5x17">
-<label class="order "><input type="checkbox" data-id="39" data-type="order" > Order?</label></div>
-<input class="notes" data-id="39" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="#10 double-window envelopes" data-cat="Paper, Filing, and Envelopes">
-<div class="row"><div class="name">#10 Double-Window Envelopes<div class="meta">boxes</div></div>
-<input class="qty" data-id="40" data-type="qty" value="4" aria-label="Quantity for #10 Double-Window Envelopes">
-<label class="order yes"><input type="checkbox" data-id="40" data-type="order" checked> Order?</label></div>
-<input class="notes" data-id="40" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="#10 no window envelopes" data-cat="Paper, Filing, and Envelopes">
-<div class="row"><div class="name">#10 No Window Envelopes<div class="meta">boxes</div></div>
-<input class="qty" data-id="41" data-type="qty" value="6" aria-label="Quantity for #10 No Window Envelopes">
-<label class="order "><input type="checkbox" data-id="41" data-type="order" > Order?</label></div>
-<input class="notes" data-id="41" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="address labels" data-cat="Paper, Filing, and Envelopes">
-<div class="row"><div class="name">Address Labels<div class="meta">boxes</div></div>
-<input class="qty" data-id="42" data-type="qty" value="3" aria-label="Quantity for Address Labels">
-<label class="order "><input type="checkbox" data-id="42" data-type="order" > Order?</label></div>
-<input class="notes" data-id="42" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="clasp envelopes 12&quot; x 15&quot;" data-cat="Paper, Filing, and Envelopes">
-<div class="row"><div class="name">Clasp Envelopes 12&quot; x 15&quot;<div class="meta">boxes</div></div>
-<input class="qty" data-id="43" data-type="qty" value="2" aria-label="Quantity for Clasp Envelopes 12&quot; x 15&quot;">
-<label class="order "><input type="checkbox" data-id="43" data-type="order" > Order?</label></div>
-<input class="notes" data-id="43" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="clasp envelopes 9&quot; x 12&quot;" data-cat="Paper, Filing, and Envelopes">
-<div class="row"><div class="name">Clasp Envelopes 9&quot; x 12&quot;<div class="meta">boxes</div></div>
-<input class="qty" data-id="44" data-type="qty" value="2" aria-label="Quantity for Clasp Envelopes 9&quot; x 12&quot;">
-<label class="order "><input type="checkbox" data-id="44" data-type="order" > Order?</label></div>
-<input class="notes" data-id="44" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="clasp envelopes 6&quot; x 9&quot;" data-cat="Paper, Filing, and Envelopes">
-<div class="row"><div class="name">Clasp Envelopes 6&quot; x 9&quot;<div class="meta">boxes</div></div>
-<input class="qty" data-id="45" data-type="qty" value="2" aria-label="Quantity for Clasp Envelopes 6&quot; x 9&quot;">
-<label class="order "><input type="checkbox" data-id="45" data-type="order" > Order?</label></div>
-<input class="notes" data-id="45" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="manila file folders" data-cat="Paper, Filing, and Envelopes">
-<div class="row"><div class="name">Manila File Folders<div class="meta">boxes</div></div>
-<input class="qty" data-id="46" data-type="qty" value="2" aria-label="Quantity for Manila File Folders">
-<label class="order "><input type="checkbox" data-id="46" data-type="order" > Order?</label></div>
-<input class="notes" data-id="46" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="hanging file folders" data-cat="Paper, Filing, and Envelopes">
-<div class="row"><div class="name">Hanging File Folders<div class="meta">boxes</div></div>
-<input class="qty" data-id="47" data-type="qty" value="2" aria-label="Quantity for Hanging File Folders">
-<label class="order "><input type="checkbox" data-id="47" data-type="order" > Order?</label></div>
-<input class="notes" data-id="47" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="shredder lubricant" data-cat="Paper, Filing, and Envelopes">
-<div class="row"><div class="name">Shredder Lubricant<div class="meta">units</div></div>
-<input class="qty" data-id="48" data-type="qty" value="2" aria-label="Quantity for Shredder Lubricant">
-<label class="order "><input type="checkbox" data-id="48" data-type="order" > Order?</label></div>
-<input class="notes" data-id="48" data-type="notes" value="" placeholder="Notes / what is needed…"></div></section><section class="inventory-group" data-category="Toner"><h2 class="cat">Toner</h2><div class="item static-item" data-name="1. postage printer - ix-357 quadient" data-cat="Toner">
-<div class="row"><div class="name">1. Postage Printer - IX-357 Quadient<div class="meta">cartridge</div></div>
-<input class="qty" data-id="49" data-type="qty" value="NA" aria-label="Quantity for 1. Postage Printer - IX-357 Quadient">
-<label class="order "><input type="checkbox" data-id="49" data-type="order" > Order?</label></div>
-<input class="notes" data-id="49" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="2. collections cyan- lc3037c" data-cat="Toner">
-<div class="row"><div class="name">2. Collections Cyan- LC3037C<div class="meta">cartridge</div></div>
-<input class="qty" data-id="50" data-type="qty" value="2" aria-label="Quantity for 2. Collections Cyan- LC3037C">
-<label class="order "><input type="checkbox" data-id="50" data-type="order" > Order?</label></div>
-<input class="notes" data-id="50" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="2. collections magenta - lc3037m" data-cat="Toner">
-<div class="row"><div class="name">2. Collections Magenta - LC3037M<div class="meta">cartridge</div></div>
-<input class="qty" data-id="51" data-type="qty" value="2" aria-label="Quantity for 2. Collections Magenta - LC3037M">
-<label class="order "><input type="checkbox" data-id="51" data-type="order" > Order?</label></div>
-<input class="notes" data-id="51" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="2. collections yellow - lc3037y" data-cat="Toner">
-<div class="row"><div class="name">2. Collections Yellow - LC3037Y<div class="meta">cartridge</div></div>
-<input class="qty" data-id="52" data-type="qty" value="3" aria-label="Quantity for 2. Collections Yellow - LC3037Y">
-<label class="order "><input type="checkbox" data-id="52" data-type="order" > Order?</label></div>
-<input class="notes" data-id="52" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="2. collections black - lc3037bk" data-cat="Toner">
-<div class="row"><div class="name">2. Collections Black - LC3037BK<div class="meta">cartridge</div></div>
-<input class="qty" data-id="53" data-type="qty" value="2" aria-label="Quantity for 2. Collections Black - LC3037BK">
-<label class="order "><input type="checkbox" data-id="53" data-type="order" > Order?</label></div>
-<input class="notes" data-id="53" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="3. collections 2- laser jetpro - hp 87x" data-cat="Toner">
-<div class="row"><div class="name">3. Collections 2- Laser JetPro - HP 87X<div class="meta">cartridge</div></div>
-<input class="qty" data-id="54" data-type="qty" value="2" aria-label="Quantity for 3. Collections 2- Laser JetPro - HP 87X">
-<label class="order "><input type="checkbox" data-id="54" data-type="order" > Order?</label></div>
-<input class="notes" data-id="54" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="4. payroll 1 - laser jet - micr" data-cat="Toner">
-<div class="row"><div class="name">4. Payroll 1 - Laser Jet - MICR<div class="meta">cartridge</div></div>
-<input class="qty" data-id="55" data-type="qty" value="3" aria-label="Quantity for 4. Payroll 1 - Laser Jet - MICR">
-<label class="order "><input type="checkbox" data-id="55" data-type="order" > Order?</label></div>
-<input class="notes" data-id="55" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="5. payroll 2- brother - tn760" data-cat="Toner">
-<div class="row"><div class="name">5. Payroll 2- Brother - TN760<div class="meta">cartridge</div></div>
-<input class="qty" data-id="56" data-type="qty" value="1" aria-label="Quantity for 5. Payroll 2- Brother - TN760">
-<label class="order "><input type="checkbox" data-id="56" data-type="order" > Order?</label></div>
-<input class="notes" data-id="56" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="5. payroll 2- brother - dr730" data-cat="Toner">
-<div class="row"><div class="name">5. Payroll 2- Brother - DR730<div class="meta">cartridge</div></div>
-<input class="qty" data-id="57" data-type="qty" value="1" aria-label="Quantity for 5. Payroll 2- Brother - DR730">
-<label class="order "><input type="checkbox" data-id="57" data-type="order" > Order?</label></div>
-<input class="notes" data-id="57" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="6. leah - laser jet p2035 - hp 05a" data-cat="Toner">
-<div class="row"><div class="name">6. Leah - Laser Jet P2035 - HP 05A<div class="meta">cartridge</div></div>
-<input class="qty" data-id="58" data-type="qty" value="1" aria-label="Quantity for 6. Leah - Laser Jet P2035 - HP 05A">
-<label class="order "><input type="checkbox" data-id="58" data-type="order" > Order?</label></div>
-<input class="notes" data-id="58" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="7. alisha - check scanner - canon 245" data-cat="Toner">
-<div class="row"><div class="name">7. Alisha - Check Scanner - Canon 245<div class="meta">cartridge</div></div>
-<input class="qty" data-id="59" data-type="qty" value="1" aria-label="Quantity for 7. Alisha - Check Scanner - Canon 245">
-<label class="order "><input type="checkbox" data-id="59" data-type="order" > Order?</label></div>
-<input class="notes" data-id="59" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="8. hr - cyan - tn299" data-cat="Toner">
-<div class="row"><div class="name">8. HR - Cyan - TN299<div class="meta">cartridge</div></div>
-<input class="qty" data-id="60" data-type="qty" value="1" aria-label="Quantity for 8. HR - Cyan - TN299">
-<label class="order "><input type="checkbox" data-id="60" data-type="order" > Order?</label></div>
-<input class="notes" data-id="60" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="8. hr - magenta - tn229" data-cat="Toner">
-<div class="row"><div class="name">8. HR - Magenta - TN229<div class="meta">cartridge</div></div>
-<input class="qty" data-id="61" data-type="qty" value="1" aria-label="Quantity for 8. HR - Magenta - TN229">
-<label class="order "><input type="checkbox" data-id="61" data-type="order" > Order?</label></div>
-<input class="notes" data-id="61" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="8. hr - yellow - tn229" data-cat="Toner">
-<div class="row"><div class="name">8. HR - Yellow - TN229<div class="meta">cartridge</div></div>
-<input class="qty" data-id="62" data-type="qty" value="1" aria-label="Quantity for 8. HR - Yellow - TN229">
-<label class="order "><input type="checkbox" data-id="62" data-type="order" > Order?</label></div>
-<input class="notes" data-id="62" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="8. hr - black - tn229" data-cat="Toner">
-<div class="row"><div class="name">8. HR - Black - TN229<div class="meta">cartridge</div></div>
-<input class="qty" data-id="63" data-type="qty" value="0" aria-label="Quantity for 8. HR - Black - TN229">
-<label class="order yes"><input type="checkbox" data-id="63" data-type="order" checked> Order?</label></div>
-<input class="notes" data-id="63" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="9. sandi - cyan- 281c" data-cat="Toner">
-<div class="row"><div class="name">9. Sandi - Cyan- 281C<div class="meta">cartridge</div></div>
-<input class="qty" data-id="64" data-type="qty" value="2" aria-label="Quantity for 9. Sandi - Cyan- 281C">
-<label class="order "><input type="checkbox" data-id="64" data-type="order" > Order?</label></div>
-<input class="notes" data-id="64" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="9. sandi - magenta - 281m" data-cat="Toner">
-<div class="row"><div class="name">9. Sandi - Magenta - 281M<div class="meta">cartridge</div></div>
-<input class="qty" data-id="65" data-type="qty" value="2" aria-label="Quantity for 9. Sandi - Magenta - 281M">
-<label class="order "><input type="checkbox" data-id="65" data-type="order" > Order?</label></div>
-<input class="notes" data-id="65" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="9. sandi - yellow - 281y" data-cat="Toner">
-<div class="row"><div class="name">9. Sandi - Yellow - 281Y<div class="meta">cartridge</div></div>
-<input class="qty" data-id="66" data-type="qty" value="2" aria-label="Quantity for 9. Sandi - Yellow - 281Y">
-<label class="order "><input type="checkbox" data-id="66" data-type="order" > Order?</label></div>
-<input class="notes" data-id="66" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="9. sandi - black - 281bk" data-cat="Toner">
-<div class="row"><div class="name">9. Sandi - Black - 281BK<div class="meta">cartridge</div></div>
-<input class="qty" data-id="67" data-type="qty" value="2" aria-label="Quantity for 9. Sandi - Black - 281BK">
-<label class="order "><input type="checkbox" data-id="67" data-type="order" > Order?</label></div>
-<input class="notes" data-id="67" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="9. sandi - xl black - 280-xl" data-cat="Toner">
-<div class="row"><div class="name">9. Sandi - XL Black - 280-XL<div class="meta">cartridge</div></div>
-<input class="qty" data-id="68" data-type="qty" value="1" aria-label="Quantity for 9. Sandi - XL Black - 280-XL">
-<label class="order "><input type="checkbox" data-id="68" data-type="order" > Order?</label></div>
-<input class="notes" data-id="68" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="10.shelley - black - lc506" data-cat="Toner">
-<div class="row"><div class="name">10.Shelley - Black - LC506<div class="meta">cartridge</div></div>
-<input class="qty" data-id="69" data-type="qty" value="1" aria-label="Quantity for 10.Shelley - Black - LC506">
-<label class="order "><input type="checkbox" data-id="69" data-type="order" > Order?</label></div>
-<input class="notes" data-id="69" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="10. shelley - cyan - lc506" data-cat="Toner">
-<div class="row"><div class="name">10. Shelley - Cyan - LC506<div class="meta">cartridge</div></div>
-<input class="qty" data-id="70" data-type="qty" value="1" aria-label="Quantity for 10. Shelley - Cyan - LC506">
-<label class="order "><input type="checkbox" data-id="70" data-type="order" > Order?</label></div>
-<input class="notes" data-id="70" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="10. shelley - magenta -lc506" data-cat="Toner">
-<div class="row"><div class="name">10. Shelley - Magenta -LC506<div class="meta">cartridge</div></div>
-<input class="qty" data-id="71" data-type="qty" value="1" aria-label="Quantity for 10. Shelley - Magenta -LC506">
-<label class="order "><input type="checkbox" data-id="71" data-type="order" > Order?</label></div>
-<input class="notes" data-id="71" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="10. shelley - yellow -lc506" data-cat="Toner">
-<div class="row"><div class="name">10. Shelley - Yellow -LC506<div class="meta">cartridge</div></div>
-<input class="qty" data-id="72" data-type="qty" value="1" aria-label="Quantity for 10. Shelley - Yellow -LC506">
-<label class="order "><input type="checkbox" data-id="72" data-type="order" > Order?</label></div>
-<input class="notes" data-id="72" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="11. julie - lc401xl c" data-cat="Toner">
-<div class="row"><div class="name">11. Julie - LC401XL C<div class="meta">cartridge</div></div>
-<input class="qty" data-id="73" data-type="qty" value="3" aria-label="Quantity for 11. Julie - LC401XL C">
-<label class="order "><input type="checkbox" data-id="73" data-type="order" > Order?</label></div>
-<input class="notes" data-id="73" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="11. julie - lc401xl m" data-cat="Toner">
-<div class="row"><div class="name">11. Julie - LC401XL M<div class="meta">cartridge</div></div>
-<input class="qty" data-id="74" data-type="qty" value="3" aria-label="Quantity for 11. Julie - LC401XL M">
-<label class="order "><input type="checkbox" data-id="74" data-type="order" > Order?</label></div>
-<input class="notes" data-id="74" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="11. julie - lc401xl y" data-cat="Toner">
-<div class="row"><div class="name">11. Julie - LC401XL Y<div class="meta">cartridge</div></div>
-<input class="qty" data-id="75" data-type="qty" value="3" aria-label="Quantity for 11. Julie - LC401XL Y">
-<label class="order "><input type="checkbox" data-id="75" data-type="order" > Order?</label></div>
-<input class="notes" data-id="75" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="11. julie - lc401xl bk" data-cat="Toner">
-<div class="row"><div class="name">11. Julie - LC401XL BK<div class="meta">cartridge</div></div>
-<input class="qty" data-id="76" data-type="qty" value="3" aria-label="Quantity for 11. Julie - LC401XL BK">
-<label class="order "><input type="checkbox" data-id="76" data-type="order" > Order?</label></div>
-<input class="notes" data-id="76" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="12. austin pm - black - tn229 bk" data-cat="Toner">
-<div class="row"><div class="name">12. Austin PM - Black - TN229 BK<div class="meta">cartridge</div></div>
-<input class="qty" data-id="77" data-type="qty" value="2" aria-label="Quantity for 12. Austin PM - Black - TN229 BK">
-<label class="order "><input type="checkbox" data-id="77" data-type="order" > Order?</label></div>
-<input class="notes" data-id="77" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="12. austin pm - cyan - tn229" data-cat="Toner">
-<div class="row"><div class="name">12. Austin PM - Cyan - TN229<div class="meta">cartridge</div></div>
-<input class="qty" data-id="78" data-type="qty" value="1" aria-label="Quantity for 12. Austin PM - Cyan - TN229">
-<label class="order "><input type="checkbox" data-id="78" data-type="order" > Order?</label></div>
-<input class="notes" data-id="78" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="12. austin pm - magenta- tn229" data-cat="Toner">
-<div class="row"><div class="name">12. Austin PM - Magenta- TN229<div class="meta">cartridge</div></div>
-<input class="qty" data-id="79" data-type="qty" value="1" aria-label="Quantity for 12. Austin PM - Magenta- TN229">
-<label class="order "><input type="checkbox" data-id="79" data-type="order" > Order?</label></div>
-<input class="notes" data-id="79" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="12. austin pm - yellow - tn229" data-cat="Toner">
-<div class="row"><div class="name">12. Austin PM - Yellow - TN229<div class="meta">cartridge</div></div>
-<input class="qty" data-id="80" data-type="qty" value="1" aria-label="Quantity for 12. Austin PM - Yellow - TN229">
-<label class="order "><input type="checkbox" data-id="80" data-type="order" > Order?</label></div>
-<input class="notes" data-id="80" data-type="notes" value="" placeholder="Notes / what is needed…"></div></section><section class="inventory-group" data-category="Consumable Supplies"><h2 class="cat">Consumable Supplies</h2><div class="item static-item" data-name="binder clips - small" data-cat="Consumable Supplies">
-<div class="row"><div class="name">Binder Clips - Small<div class="meta">boxes</div></div>
-<input class="qty" data-id="81" data-type="qty" value="3" aria-label="Quantity for Binder Clips - Small">
-<label class="order "><input type="checkbox" data-id="81" data-type="order" > Order?</label></div>
-<input class="notes" data-id="81" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="binder clips - medium" data-cat="Consumable Supplies">
-<div class="row"><div class="name">Binder Clips - Medium<div class="meta">boxes</div></div>
-<input class="qty" data-id="82" data-type="qty" value="7" aria-label="Quantity for Binder Clips - Medium">
-<label class="order "><input type="checkbox" data-id="82" data-type="order" > Order?</label></div>
-<input class="notes" data-id="82" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="binder clips - large" data-cat="Consumable Supplies">
-<div class="row"><div class="name">Binder Clips - Large<div class="meta">clips</div></div>
-<input class="qty" data-id="83" data-type="qty" value="5" aria-label="Quantity for Binder Clips - Large">
-<label class="order "><input type="checkbox" data-id="83" data-type="order" > Order?</label></div>
-<input class="notes" data-id="83" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="paper clips" data-cat="Consumable Supplies">
-<div class="row"><div class="name">Paper Clips<div class="meta">boxes</div></div>
-<input class="qty" data-id="84" data-type="qty" value="12" aria-label="Quantity for Paper Clips">
-<label class="order "><input type="checkbox" data-id="84" data-type="order" > Order?</label></div>
-<input class="notes" data-id="84" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="staples" data-cat="Consumable Supplies">
-<div class="row"><div class="name">Staples<div class="meta">boxes</div></div>
-<input class="qty" data-id="85" data-type="qty" value="8" aria-label="Quantity for Staples">
-<label class="order "><input type="checkbox" data-id="85" data-type="order" > Order?</label></div>
-<input class="notes" data-id="85" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="batteries - aaa" data-cat="Consumable Supplies">
-<div class="row"><div class="name">Batteries - AAA<div class="meta">boxes</div></div>
-<input class="qty" data-id="86" data-type="qty" value="10" aria-label="Quantity for Batteries - AAA">
-<label class="order "><input type="checkbox" data-id="86" data-type="order" > Order?</label></div>
-<input class="notes" data-id="86" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="batteries - aa" data-cat="Consumable Supplies">
-<div class="row"><div class="name">Batteries - AA<div class="meta">boxes</div></div>
-<input class="qty" data-id="87" data-type="qty" value="10" aria-label="Quantity for Batteries - AA">
-<label class="order "><input type="checkbox" data-id="87" data-type="order" > Order?</label></div>
-<input class="notes" data-id="87" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="#64 rubber bands" data-cat="Consumable Supplies">
-<div class="row"><div class="name">#64 Rubber Bands<div class="meta">bags</div></div>
-<input class="qty" data-id="88" data-type="qty" value="1" aria-label="Quantity for #64 Rubber Bands">
-<label class="order "><input type="checkbox" data-id="88" data-type="order" > Order?</label></div>
-<input class="notes" data-id="88" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="highlighters" data-cat="Consumable Supplies">
-<div class="row"><div class="name">Highlighters<div class="meta">boxes</div></div>
-<input class="qty" data-id="89" data-type="qty" value="2" aria-label="Quantity for Highlighters">
-<label class="order "><input type="checkbox" data-id="89" data-type="order" > Order?</label></div>
-<input class="notes" data-id="89" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="white board markers" data-cat="Consumable Supplies">
-<div class="row"><div class="name">White Board Markers<div class="meta">boxes</div></div>
-<input class="qty" data-id="90" data-type="qty" value="5" aria-label="Quantity for White Board Markers">
-<label class="order "><input type="checkbox" data-id="90" data-type="order" > Order?</label></div>
-<input class="notes" data-id="90" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="white board eraser" data-cat="Consumable Supplies">
-<div class="row"><div class="name">White Board Eraser<div class="meta">bottles</div></div>
-<input class="qty" data-id="91" data-type="qty" value="2" aria-label="Quantity for White Board Eraser">
-<label class="order "><input type="checkbox" data-id="91" data-type="order" > Order?</label></div>
-<input class="notes" data-id="91" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="sticky notes" data-cat="Consumable Supplies">
-<div class="row"><div class="name">Sticky Notes<div class="meta">pads</div></div>
-<input class="qty" data-id="92" data-type="qty" value="10" aria-label="Quantity for Sticky Notes">
-<label class="order "><input type="checkbox" data-id="92" data-type="order" > Order?</label></div>
-<input class="notes" data-id="92" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="sticky notes - lined" data-cat="Consumable Supplies">
-<div class="row"><div class="name">Sticky Notes - Lined<div class="meta">pads</div></div>
-<input class="qty" data-id="93" data-type="qty" value="6" aria-label="Quantity for Sticky Notes - Lined">
-<label class="order "><input type="checkbox" data-id="93" data-type="order" > Order?</label></div>
-<input class="notes" data-id="93" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="note pads - letter sized" data-cat="Consumable Supplies">
-<div class="row"><div class="name">Note Pads - Letter Sized<div class="meta">pads</div></div>
-<input class="qty" data-id="94" data-type="qty" value="11" aria-label="Quantity for Note Pads - Letter Sized">
-<label class="order "><input type="checkbox" data-id="94" data-type="order" > Order?</label></div>
-<input class="notes" data-id="94" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="note pads - 5&quot; x 8&quot;" data-cat="Consumable Supplies">
-<div class="row"><div class="name">Note Pads - 5&quot; x 8&quot;<div class="meta">pads</div></div>
-<input class="qty" data-id="95" data-type="qty" value="6" aria-label="Quantity for Note Pads - 5&quot; x 8&quot;">
-<label class="order "><input type="checkbox" data-id="95" data-type="order" > Order?</label></div>
-<input class="notes" data-id="95" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="sheet protectors 8.5x11" data-cat="Consumable Supplies">
-<div class="row"><div class="name">Sheet Protectors 8.5x11<div class="meta">boxes</div></div>
-<input class="qty" data-id="96" data-type="qty" value="1" aria-label="Quantity for Sheet Protectors 8.5x11">
-<label class="order "><input type="checkbox" data-id="96" data-type="order" > Order?</label></div>
-<input class="notes" data-id="96" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="pens - black" data-cat="Consumable Supplies">
-<div class="row"><div class="name">Pens - Black<div class="meta">boxes</div></div>
-<input class="qty" data-id="97" data-type="qty" value="1" aria-label="Quantity for Pens - Black">
-<label class="order "><input type="checkbox" data-id="97" data-type="order" > Order?</label></div>
-<input class="notes" data-id="97" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="pens - blue" data-cat="Consumable Supplies">
-<div class="row"><div class="name">Pens - Blue<div class="meta">boxes</div></div>
-<input class="qty" data-id="98" data-type="qty" value="2" aria-label="Quantity for Pens - Blue">
-<label class="order "><input type="checkbox" data-id="98" data-type="order" > Order?</label></div>
-<input class="notes" data-id="98" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="pens - red" data-cat="Consumable Supplies">
-<div class="row"><div class="name">Pens - Red<div class="meta">boxes</div></div>
-<input class="qty" data-id="99" data-type="qty" value="2" aria-label="Quantity for Pens - Red">
-<label class="order "><input type="checkbox" data-id="99" data-type="order" > Order?</label></div>
-<input class="notes" data-id="99" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="mechanical pencils" data-cat="Consumable Supplies">
-<div class="row"><div class="name">Mechanical Pencils<div class="meta">boxes</div></div>
-<input class="qty" data-id="100" data-type="qty" value="2" aria-label="Quantity for Mechanical Pencils">
-<label class="order "><input type="checkbox" data-id="100" data-type="order" > Order?</label></div>
-<input class="notes" data-id="100" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="invisible tape" data-cat="Consumable Supplies">
-<div class="row"><div class="name">Invisible Tape<div class="meta">rolls</div></div>
-<input class="qty" data-id="101" data-type="qty" value="10" aria-label="Quantity for Invisible Tape">
-<label class="order "><input type="checkbox" data-id="101" data-type="order" > Order?</label></div>
-<input class="notes" data-id="101" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="packing tape" data-cat="Consumable Supplies">
-<div class="row"><div class="name">Packing Tape<div class="meta">rolls</div></div>
-<input class="qty" data-id="102" data-type="qty" value="2" aria-label="Quantity for Packing Tape">
-<label class="order "><input type="checkbox" data-id="102" data-type="order" > Order?</label></div>
-<input class="notes" data-id="102" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="keyboard cleaner" data-cat="Consumable Supplies">
-<div class="row"><div class="name">Keyboard Cleaner<div class="meta">cans</div></div>
-<input class="qty" data-id="103" data-type="qty" value="4" aria-label="Quantity for Keyboard Cleaner">
-<label class="order "><input type="checkbox" data-id="103" data-type="order" > Order?</label></div>
-<input class="notes" data-id="103" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="correction tape" data-cat="Consumable Supplies">
-<div class="row"><div class="name">Correction Tape<div class="meta">rolls</div></div>
-<input class="qty" data-id="104" data-type="qty" value="9" aria-label="Quantity for Correction Tape">
-<label class="order "><input type="checkbox" data-id="104" data-type="order" > Order?</label></div>
-<input class="notes" data-id="104" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="fingertip moistener" data-cat="Consumable Supplies">
-<div class="row"><div class="name">Fingertip Moistener<div class="meta">units</div></div>
-<input class="qty" data-id="105" data-type="qty" value="5" aria-label="Quantity for Fingertip Moistener">
-<label class="order "><input type="checkbox" data-id="105" data-type="order" > Order?</label></div>
-<input class="notes" data-id="105" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="kleenex tissues" data-cat="Consumable Supplies">
-<div class="row"><div class="name">Kleenex Tissues<div class="meta">boxes</div></div>
-<input class="qty" data-id="106" data-type="qty" value="8" aria-label="Quantity for Kleenex Tissues">
-<label class="order "><input type="checkbox" data-id="106" data-type="order" > Order?</label></div>
-<input class="notes" data-id="106" data-type="notes" value="" placeholder="Notes / what is needed…"></div></section><section class="inventory-group" data-category="Desk Supplies"><h2 class="cat">Desk Supplies</h2><div class="item static-item" data-name="tape dispensers" data-cat="Desk Supplies">
-<div class="row"><div class="name">Tape Dispensers<div class="meta">units</div></div>
-<input class="qty" data-id="107" data-type="qty" value="3" aria-label="Quantity for Tape Dispensers">
-<label class="order "><input type="checkbox" data-id="107" data-type="order" > Order?</label></div>
-<input class="notes" data-id="107" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="scissors" data-cat="Desk Supplies">
-<div class="row"><div class="name">Scissors<div class="meta">units</div></div>
-<input class="qty" data-id="108" data-type="qty" value="3" aria-label="Quantity for Scissors">
-<label class="order "><input type="checkbox" data-id="108" data-type="order" > Order?</label></div>
-<input class="notes" data-id="108" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="staplers" data-cat="Desk Supplies">
-<div class="row"><div class="name">Staplers<div class="meta">units</div></div>
-<input class="qty" data-id="109" data-type="qty" value="5" aria-label="Quantity for Staplers">
-<label class="order "><input type="checkbox" data-id="109" data-type="order" > Order?</label></div>
-<input class="notes" data-id="109" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="staple removers" data-cat="Desk Supplies">
-<div class="row"><div class="name">Staple Removers<div class="meta">units</div></div>
-<input class="qty" data-id="110" data-type="qty" value="6" aria-label="Quantity for Staple Removers">
-<label class="order "><input type="checkbox" data-id="110" data-type="order" > Order?</label></div>
-<input class="notes" data-id="110" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="mesh pencil holders" data-cat="Desk Supplies">
-<div class="row"><div class="name">Mesh Pencil Holders<div class="meta">units</div></div>
-<input class="qty" data-id="111" data-type="qty" value="4" aria-label="Quantity for Mesh Pencil Holders">
-<label class="order "><input type="checkbox" data-id="111" data-type="order" > Order?</label></div>
-<input class="notes" data-id="111" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="letter openers" data-cat="Desk Supplies">
-<div class="row"><div class="name">Letter Openers<div class="meta">units</div></div>
-<input class="qty" data-id="112" data-type="qty" value="6" aria-label="Quantity for Letter Openers">
-<label class="order "><input type="checkbox" data-id="112" data-type="order" > Order?</label></div>
-<input class="notes" data-id="112" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="mouse pads" data-cat="Desk Supplies">
-<div class="row"><div class="name">Mouse Pads<div class="meta">units</div></div>
-<input class="qty" data-id="113" data-type="qty" value="4" aria-label="Quantity for Mouse Pads">
-<label class="order "><input type="checkbox" data-id="113" data-type="order" > Order?</label></div>
-<input class="notes" data-id="113" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="calculator" data-cat="Desk Supplies">
-<div class="row"><div class="name">Calculator<div class="meta">units</div></div>
-<input class="qty" data-id="114" data-type="qty" value="4" aria-label="Quantity for Calculator">
-<label class="order "><input type="checkbox" data-id="114" data-type="order" > Order?</label></div>
-<input class="notes" data-id="114" data-type="notes" value="" placeholder="Notes / what is needed…"></div></section><section class="inventory-group" data-category="Other (not on Amazon)"><h2 class="cat">Other (not on Amazon)</h2><div class="item static-item" data-name="water jugs" data-cat="Other (not on Amazon)">
-<div class="row"><div class="name">Water Jugs<div class="meta">jugs</div></div>
-<input class="qty" data-id="115" data-type="qty" value="10" aria-label="Quantity for Water Jugs">
-<label class="order "><input type="checkbox" data-id="115" data-type="order" > Order?</label></div>
-<input class="notes" data-id="115" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="fedex envelopes" data-cat="Other (not on Amazon)">
-<div class="row"><div class="name">FedEx Envelopes<div class="meta">packs</div></div>
-<input class="qty" data-id="116" data-type="qty" value="10" aria-label="Quantity for FedEx Envelopes">
-<label class="order "><input type="checkbox" data-id="116" data-type="order" > Order?</label></div>
-<input class="notes" data-id="116" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="csi logo envelopes" data-cat="Other (not on Amazon)">
-<div class="row"><div class="name">CSI Logo Envelopes<div class="meta">boxes</div></div>
-<input class="qty" data-id="117" data-type="qty" value="1" aria-label="Quantity for CSI Logo Envelopes">
-<label class="order "><input type="checkbox" data-id="117" data-type="order" > Order?</label></div>
-<input class="notes" data-id="117" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="csi logo labels" data-cat="Other (not on Amazon)">
-<div class="row"><div class="name">CSI Logo Labels<div class="meta">boxes</div></div>
-<input class="qty" data-id="118" data-type="qty" value="1" aria-label="Quantity for CSI Logo Labels">
-<label class="order "><input type="checkbox" data-id="118" data-type="order" > Order?</label></div>
-<input class="notes" data-id="118" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="mail date stamp ink - red and blue" data-cat="Other (not on Amazon)">
-<div class="row"><div class="name">Mail date stamp ink - Red and Blue<div class="meta">Bottles</div></div>
-<input class="qty" data-id="119" data-type="qty" value="2" aria-label="Quantity for Mail date stamp ink - Red and Blue">
-<label class="order "><input type="checkbox" data-id="119" data-type="order" > Order?</label></div>
-<input class="notes" data-id="119" data-type="notes" value="" placeholder="Notes / what is needed…"></div><div class="item static-item" data-name="priority mail envelopes" data-cat="Other (not on Amazon)">
-<div class="row"><div class="name">Priority Mail Envelopes<div class="meta">envelopes</div></div>
-<input class="qty" data-id="120" data-type="qty" value="6" aria-label="Quantity for Priority Mail Envelopes">
-<label class="order "><input type="checkbox" data-id="120" data-type="order" > Order?</label></div>
-<input class="notes" data-id="120" data-type="notes" value="" placeholder="Notes / what is needed…"></div></section></div>
+<div class="summary"><div class="card"><div>Inventory items</div><div id="total" class="big">119</div></div><div class="card"><div>Need ordering</div><div id="needed" class="big">0</div></div><div class="card"><div>Last checked</div><div id="last" class="big" style="font-size:17px">Not yet</div><div id="next" class="meta"></div></div></div>
+<div class="controls"><input id="search" type="search" placeholder="Search inventory…"><select id="filter"><option value="all">All categories</option></select><label class="order"><input id="only" type="checkbox"> Needs ordering only</label><button id="print" class="secondary">Print / Save PDF</button><button id="manage" class="secondary">⚙️ Manage List</button></div>
+<div id="manager" class="manager hidden">
+<h2 id="formTitle">Add a new inventory item</h2><p>You can add new items here. While Manage List is open, every inventory item also has Edit and Remove buttons.</p>
+<form id="itemForm"><input type="hidden" id="editId"><div class="formgrid">
+<input id="itemName" class="field" placeholder="Item name" required>
+<input id="itemCategory" class="field" list="categoryList" placeholder="Category" required><datalist id="categoryList"></datalist>
+<input id="itemQty" class="field" placeholder="Qty" value="0" required>
+<input id="itemUnit" class="field" placeholder="Unit (boxes, rolls…)" required>
+</div><div class="manager-actions"><button type="submit" id="saveItem">+ Add Item</button><button type="button" id="cancelEdit" class="secondary hidden">Cancel Edit</button><button type="button" id="closeManage" class="secondary">Done Managing</button></div></form>
+</div>
+<div id="toast"></div><div id="list"></div>
 <button id="finish">✓ Finish this inventory check</button>
 </main>
 <script>
-const defaults=[{"id": 1, "category": "Kitchen & Cleaning", "name": "Dish Soap", "qty": 1, "unit": "bottles", "order": false, "notes": ""}, {"id": 2, "category": "Kitchen & Cleaning", "name": "Hand Soap", "qty": 10, "unit": "bottles", "order": false, "notes": ""}, {"id": 3, "category": "Kitchen & Cleaning", "name": "Paper Towels", "qty": 6, "unit": "rolls", "order": false, "notes": ""}, {"id": 4, "category": "Kitchen & Cleaning", "name": "Trash bags", "qty": 3, "unit": "rolls", "order": false, "notes": ""}, {"id": 5, "category": "Kitchen & Cleaning", "name": "Napkins", "qty": 2, "unit": "sleeves", "order": false, "notes": ""}, {"id": 6, "category": "Kitchen & Cleaning", "name": "Disinfectant Sheets", "qty": 3, "unit": "Bottles", "order": false, "notes": ""}, {"id": 7, "category": "Kitchen & Cleaning", "name": "Donut Shop Coffee", "qty": 4, "unit": "boxes", "order": false, "notes": ""}, {"id": 8, "category": "Kitchen & Cleaning", "name": "Starbucks Dark Roast Coffee", "qty": 4, "unit": "boxes", "order": false, "notes": ""}, {"id": 9, "category": "Kitchen & Cleaning", "name": "Green Mountain Decaf Coffee", "qty": 4, "unit": "boxes", "order": false, "notes": ""}, {"id": 10, "category": "Kitchen & Cleaning", "name": "Black Tea", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 11, "category": "Kitchen & Cleaning", "name": "Early Grey Black Tea", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 12, "category": "Kitchen & Cleaning", "name": "English Breakfast TEA", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 13, "category": "Kitchen & Cleaning", "name": "English Breakfast Decaf Tea", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 14, "category": "Kitchen & Cleaning", "name": "Herbal Tea Pure Peppermint", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 15, "category": "Kitchen & Cleaning", "name": "Green Tea", "qty": 0, "unit": "boxes", "order": true, "notes": ""}, {"id": 16, "category": "Kitchen & Cleaning", "name": "Coffee Stirrers", "qty": 3, "unit": "boxes", "order": false, "notes": ""}, {"id": 17, "category": "Kitchen & Cleaning", "name": "Sugar", "qty": 1, "unit": "boxes", "order": false, "notes": ""}, {"id": 18, "category": "Kitchen & Cleaning", "name": "Splenda", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 19, "category": "Kitchen & Cleaning", "name": "Sweet N Low", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 20, "category": "Kitchen & Cleaning", "name": "Stevia", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 21, "category": "Kitchen & Cleaning", "name": "Salt and Pepper", "qty": 2, "unit": "Shakers", "order": false, "notes": ""}, {"id": 22, "category": "Kitchen & Cleaning", "name": "French Vanilla Creamer", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 23, "category": "Kitchen & Cleaning", "name": "Original Creamer", "qty": 3, "unit": "boxes", "order": false, "notes": ""}, {"id": 24, "category": "Kitchen & Cleaning", "name": "Plastic Forks", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 25, "category": "Kitchen & Cleaning", "name": "Plastic Spoons", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 26, "category": "Kitchen & Cleaning", "name": "Plastic Knives", "qty": 1, "unit": "boxes", "order": false, "notes": ""}, {"id": 27, "category": "Kitchen & Cleaning", "name": "Paper Plates", "qty": 7, "unit": "sleeves", "order": false, "notes": ""}, {"id": 28, "category": "Kitchen & Cleaning", "name": "Paper Bowls", "qty": 2, "unit": "sleeves", "order": false, "notes": ""}, {"id": 29, "category": "Kitchen & Cleaning", "name": "Paper Cups", "qty": 2, "unit": "sleeves", "order": true, "notes": ""}, {"id": 30, "category": "First Aid", "name": "Alcohol Pads", "qty": 1, "unit": "boxes", "order": false, "notes": ""}, {"id": 31, "category": "First Aid", "name": "Antacids", "qty": 1, "unit": "bottles", "order": false, "notes": ""}, {"id": 32, "category": "First Aid", "name": "Antibiotic Ointment", "qty": 1, "unit": "tubes", "order": false, "notes": ""}, {"id": 33, "category": "First Aid", "name": "Band-aids", "qty": 1, "unit": "boxes", "order": false, "notes": ""}, {"id": 34, "category": "First Aid", "name": "Guaze Pads", "qty": 1, "unit": "boxes", "order": false, "notes": ""}, {"id": 35, "category": "First Aid", "name": "Cotton Squares", "qty": 1, "unit": "bags", "order": false, "notes": ""}, {"id": 36, "category": "First Aid", "name": "Cotton Swabs", "qty": 1, "unit": "boxes", "order": false, "notes": ""}, {"id": 37, "category": "Paper, Filing, and Envelopes", "name": "Letter Sized Copy Paper - 8.5x11", "qty": 5, "unit": "reams", "order": true, "notes": ""}, {"id": 38, "category": "Paper, Filing, and Envelopes", "name": "Legal Sized Copy Paper - 8.5x14", "qty": 5, "unit": "reams", "order": true, "notes": ""}, {"id": 39, "category": "Paper, Filing, and Envelopes", "name": "Ledger Copy Paper - 8.5x17", "qty": 6, "unit": "reams", "order": false, "notes": ""}, {"id": 40, "category": "Paper, Filing, and Envelopes", "name": "#10 Double-Window Envelopes", "qty": 4, "unit": "boxes", "order": true, "notes": ""}, {"id": 41, "category": "Paper, Filing, and Envelopes", "name": "#10 No Window Envelopes", "qty": 6, "unit": "boxes", "order": false, "notes": ""}, {"id": 42, "category": "Paper, Filing, and Envelopes", "name": "Address Labels", "qty": 3, "unit": "boxes", "order": false, "notes": ""}, {"id": 43, "category": "Paper, Filing, and Envelopes", "name": "Clasp Envelopes 12\" x 15\"", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 44, "category": "Paper, Filing, and Envelopes", "name": "Clasp Envelopes 9\" x 12\"", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 45, "category": "Paper, Filing, and Envelopes", "name": "Clasp Envelopes 6\" x 9\"", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 46, "category": "Paper, Filing, and Envelopes", "name": "Manila File Folders", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 47, "category": "Paper, Filing, and Envelopes", "name": "Hanging File Folders", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 48, "category": "Paper, Filing, and Envelopes", "name": "Shredder Lubricant", "qty": 2, "unit": "units", "order": false, "notes": ""}, {"id": 49, "category": "Toner", "name": "1. Postage Printer - IX-357 Quadient", "qty": "NA", "unit": "cartridge", "order": false, "notes": ""}, {"id": 50, "category": "Toner", "name": "2. Collections Cyan- LC3037C", "qty": 2, "unit": "cartridge", "order": false, "notes": ""}, {"id": 51, "category": "Toner", "name": "2. Collections Magenta - LC3037M", "qty": 2, "unit": "cartridge", "order": false, "notes": ""}, {"id": 52, "category": "Toner", "name": "2. Collections Yellow - LC3037Y", "qty": 3, "unit": "cartridge", "order": false, "notes": ""}, {"id": 53, "category": "Toner", "name": "2. Collections Black - LC3037BK", "qty": 2, "unit": "cartridge", "order": false, "notes": ""}, {"id": 54, "category": "Toner", "name": "3. Collections 2- Laser JetPro - HP 87X", "qty": 2, "unit": "cartridge", "order": false, "notes": ""}, {"id": 55, "category": "Toner", "name": "4. Payroll 1 - Laser Jet - MICR", "qty": 3, "unit": "cartridge", "order": false, "notes": ""}, {"id": 56, "category": "Toner", "name": "5. Payroll 2- Brother - TN760", "qty": 1, "unit": "cartridge", "order": false, "notes": ""}, {"id": 57, "category": "Toner", "name": "5. Payroll 2- Brother - DR730", "qty": 1, "unit": "cartridge", "order": false, "notes": ""}, {"id": 58, "category": "Toner", "name": "6. Leah - Laser Jet P2035 - HP 05A", "qty": 1, "unit": "cartridge", "order": false, "notes": ""}, {"id": 59, "category": "Toner", "name": "7. Alisha - Check Scanner - Canon 245", "qty": 1, "unit": "cartridge", "order": false, "notes": ""}, {"id": 60, "category": "Toner", "name": "8. HR - Cyan - TN299", "qty": 1, "unit": "cartridge", "order": false, "notes": ""}, {"id": 61, "category": "Toner", "name": "8. HR - Magenta - TN229", "qty": 1, "unit": "cartridge", "order": false, "notes": ""}, {"id": 62, "category": "Toner", "name": "8. HR - Yellow - TN229", "qty": 1, "unit": "cartridge", "order": false, "notes": ""}, {"id": 63, "category": "Toner", "name": "8. HR - Black - TN229", "qty": 0, "unit": "cartridge", "order": true, "notes": ""}, {"id": 64, "category": "Toner", "name": "9. Sandi - Cyan- 281C", "qty": 2, "unit": "cartridge", "order": false, "notes": ""}, {"id": 65, "category": "Toner", "name": "9. Sandi - Magenta - 281M", "qty": 2, "unit": "cartridge", "order": false, "notes": ""}, {"id": 66, "category": "Toner", "name": "9. Sandi - Yellow - 281Y", "qty": 2, "unit": "cartridge", "order": false, "notes": ""}, {"id": 67, "category": "Toner", "name": "9. Sandi - Black - 281BK", "qty": 2, "unit": "cartridge", "order": false, "notes": ""}, {"id": 68, "category": "Toner", "name": "9. Sandi - XL Black - 280-XL", "qty": 1, "unit": "cartridge", "order": false, "notes": ""}, {"id": 69, "category": "Toner", "name": "10.Shelley - Black - LC506", "qty": 1, "unit": "cartridge", "order": false, "notes": ""}, {"id": 70, "category": "Toner", "name": "10. Shelley - Cyan - LC506", "qty": 1, "unit": "cartridge", "order": false, "notes": ""}, {"id": 71, "category": "Toner", "name": "10. Shelley - Magenta -LC506", "qty": 1, "unit": "cartridge", "order": false, "notes": ""}, {"id": 72, "category": "Toner", "name": "10. Shelley - Yellow -LC506", "qty": 1, "unit": "cartridge", "order": false, "notes": ""}, {"id": 73, "category": "Toner", "name": "11. Julie - LC401XL C", "qty": 3, "unit": "cartridge", "order": false, "notes": ""}, {"id": 74, "category": "Toner", "name": "11. Julie - LC401XL M", "qty": 3, "unit": "cartridge", "order": false, "notes": ""}, {"id": 75, "category": "Toner", "name": "11. Julie - LC401XL Y", "qty": 3, "unit": "cartridge", "order": false, "notes": ""}, {"id": 76, "category": "Toner", "name": "11. Julie - LC401XL BK", "qty": 3, "unit": "cartridge", "order": false, "notes": ""}, {"id": 77, "category": "Toner", "name": "12. Austin PM - Black - TN229 BK", "qty": 2, "unit": "cartridge", "order": false, "notes": ""}, {"id": 78, "category": "Toner", "name": "12. Austin PM - Cyan - TN229", "qty": 1, "unit": "cartridge", "order": false, "notes": ""}, {"id": 79, "category": "Toner", "name": "12. Austin PM - Magenta- TN229", "qty": 1, "unit": "cartridge", "order": false, "notes": ""}, {"id": 80, "category": "Toner", "name": "12. Austin PM - Yellow - TN229", "qty": 1, "unit": "cartridge", "order": false, "notes": ""}, {"id": 81, "category": "Consumable Supplies", "name": "Binder Clips - Small", "qty": 3, "unit": "boxes", "order": false, "notes": ""}, {"id": 82, "category": "Consumable Supplies", "name": "Binder Clips - Medium", "qty": 7, "unit": "boxes", "order": false, "notes": ""}, {"id": 83, "category": "Consumable Supplies", "name": "Binder Clips - Large", "qty": 5, "unit": "clips", "order": false, "notes": ""}, {"id": 84, "category": "Consumable Supplies", "name": "Paper Clips", "qty": 12, "unit": "boxes", "order": false, "notes": ""}, {"id": 85, "category": "Consumable Supplies", "name": "Staples", "qty": 8, "unit": "boxes", "order": false, "notes": ""}, {"id": 86, "category": "Consumable Supplies", "name": "Batteries - AAA", "qty": 10, "unit": "boxes", "order": false, "notes": ""}, {"id": 87, "category": "Consumable Supplies", "name": "Batteries - AA", "qty": 10, "unit": "boxes", "order": false, "notes": ""}, {"id": 88, "category": "Consumable Supplies", "name": "#64 Rubber Bands", "qty": 1, "unit": "bags", "order": false, "notes": ""}, {"id": 89, "category": "Consumable Supplies", "name": "Highlighters", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 90, "category": "Consumable Supplies", "name": "White Board Markers", "qty": 5, "unit": "boxes", "order": false, "notes": ""}, {"id": 91, "category": "Consumable Supplies", "name": "White Board Eraser", "qty": 2, "unit": "bottles", "order": false, "notes": ""}, {"id": 92, "category": "Consumable Supplies", "name": "Sticky Notes", "qty": 10, "unit": "pads", "order": false, "notes": ""}, {"id": 93, "category": "Consumable Supplies", "name": "Sticky Notes - Lined", "qty": 6, "unit": "pads", "order": false, "notes": ""}, {"id": 94, "category": "Consumable Supplies", "name": "Note Pads - Letter Sized", "qty": 11, "unit": "pads", "order": false, "notes": ""}, {"id": 95, "category": "Consumable Supplies", "name": "Note Pads - 5\" x 8\"", "qty": 6, "unit": "pads", "order": false, "notes": ""}, {"id": 96, "category": "Consumable Supplies", "name": "Sheet Protectors 8.5x11", "qty": 1, "unit": "boxes", "order": false, "notes": ""}, {"id": 97, "category": "Consumable Supplies", "name": "Pens - Black", "qty": 1, "unit": "boxes", "order": false, "notes": ""}, {"id": 98, "category": "Consumable Supplies", "name": "Pens - Blue", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 99, "category": "Consumable Supplies", "name": "Pens - Red", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 100, "category": "Consumable Supplies", "name": "Mechanical Pencils", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 101, "category": "Consumable Supplies", "name": "Invisible Tape", "qty": 10, "unit": "rolls", "order": false, "notes": ""}, {"id": 102, "category": "Consumable Supplies", "name": "Packing Tape", "qty": 2, "unit": "rolls", "order": false, "notes": ""}, {"id": 103, "category": "Consumable Supplies", "name": "Keyboard Cleaner", "qty": 4, "unit": "cans", "order": false, "notes": ""}, {"id": 104, "category": "Consumable Supplies", "name": "Correction Tape", "qty": 9, "unit": "rolls", "order": false, "notes": ""}, {"id": 105, "category": "Consumable Supplies", "name": "Fingertip Moistener", "qty": 5, "unit": "units", "order": false, "notes": ""}, {"id": 106, "category": "Consumable Supplies", "name": "Kleenex Tissues", "qty": 8, "unit": "boxes", "order": false, "notes": ""}, {"id": 107, "category": "Desk Supplies", "name": "Tape Dispensers", "qty": 3, "unit": "units", "order": false, "notes": ""}, {"id": 108, "category": "Desk Supplies", "name": "Scissors", "qty": 3, "unit": "units", "order": false, "notes": ""}, {"id": 109, "category": "Desk Supplies", "name": "Staplers", "qty": 5, "unit": "units", "order": false, "notes": ""}, {"id": 110, "category": "Desk Supplies", "name": "Staple Removers", "qty": 6, "unit": "units", "order": false, "notes": ""}, {"id": 111, "category": "Desk Supplies", "name": "Mesh Pencil Holders", "qty": 4, "unit": "units", "order": false, "notes": ""}, {"id": 112, "category": "Desk Supplies", "name": "Letter Openers", "qty": 6, "unit": "units", "order": false, "notes": ""}, {"id": 113, "category": "Desk Supplies", "name": "Mouse Pads", "qty": 4, "unit": "units", "order": false, "notes": ""}, {"id": 114, "category": "Desk Supplies", "name": "Calculator", "qty": 4, "unit": "units", "order": false, "notes": ""}, {"id": 115, "category": "Other (not on Amazon)", "name": "Water Jugs", "qty": 10, "unit": "jugs", "order": false, "notes": ""}, {"id": 116, "category": "Other (not on Amazon)", "name": "FedEx Envelopes", "qty": 10, "unit": "packs", "order": false, "notes": ""}, {"id": 117, "category": "Other (not on Amazon)", "name": "CSI Logo Envelopes", "qty": 1, "unit": "boxes", "order": false, "notes": ""}, {"id": 118, "category": "Other (not on Amazon)", "name": "CSI Logo Labels", "qty": 1, "unit": "boxes", "order": false, "notes": ""}, {"id": 119, "category": "Other (not on Amazon)", "name": "Mail date stamp ink - Red and Blue", "qty": 2, "unit": "Bottles", "order": false, "notes": ""}, {"id": 120, "category": "Other (not on Amazon)", "name": "Priority Mail Envelopes", "qty": 6, "unit": "envelopes", "order": false, "notes": ""}];
+const defaults=[{"id": 1, "category": "Kitchen & Cleaning", "name": "Dish Soap", "qty": 1, "unit": "bottles", "order": false, "notes": ""}, {"id": 2, "category": "Kitchen & Cleaning", "name": "Hand Soap", "qty": 10, "unit": "bottles", "order": false, "notes": ""}, {"id": 3, "category": "Kitchen & Cleaning", "name": "Paper Towels", "qty": 6, "unit": "rolls", "order": false, "notes": ""}, {"id": 4, "category": "Kitchen & Cleaning", "name": "Trash bags", "qty": 3, "unit": "rolls", "order": false, "notes": ""}, {"id": 5, "category": "Kitchen & Cleaning", "name": "Napkins", "qty": 2, "unit": "sleeves", "order": false, "notes": ""}, {"id": 6, "category": "Kitchen & Cleaning", "name": "Disinfectant Sheets", "qty": 3, "unit": "Bottles", "order": false, "notes": ""}, {"id": 7, "category": "Kitchen & Cleaning", "name": "Donut Shop Coffee", "qty": 4, "unit": "boxes", "order": false, "notes": ""}, {"id": 8, "category": "Kitchen & Cleaning", "name": "Starbucks Dark Roast Coffee", "qty": 4, "unit": "boxes", "order": false, "notes": ""}, {"id": 9, "category": "Kitchen & Cleaning", "name": "Green Mountain Decaf Coffee", "qty": 4, "unit": "boxes", "order": false, "notes": ""}, {"id": 10, "category": "Kitchen & Cleaning", "name": "Black Tea", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 11, "category": "Kitchen & Cleaning", "name": "Early Grey Black Tea", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 12, "category": "Kitchen & Cleaning", "name": "English Breakfast TEA", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 13, "category": "Kitchen & Cleaning", "name": "English Breakfast Decaf Tea", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 14, "category": "Kitchen & Cleaning", "name": "Herbal Tea Pure Peppermint", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 15, "category": "Kitchen & Cleaning", "name": "Green Tea", "qty": 0, "unit": "boxes", "order": true, "notes": ""}, {"id": 16, "category": "Kitchen & Cleaning", "name": "Coffee Stirrers", "qty": 3, "unit": "boxes", "order": false, "notes": ""}, {"id": 17, "category": "Kitchen & Cleaning", "name": "Sugar", "qty": 1, "unit": "boxes", "order": false, "notes": ""}, {"id": 18, "category": "Kitchen & Cleaning", "name": "Splenda", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 19, "category": "Kitchen & Cleaning", "name": "Sweet N Low", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 20, "category": "Kitchen & Cleaning", "name": "Stevia", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 21, "category": "Kitchen & Cleaning", "name": "Salt and Pepper", "qty": 2, "unit": "Shakers", "order": false, "notes": ""}, {"id": 22, "category": "Kitchen & Cleaning", "name": "French Vanilla Creamer", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 23, "category": "Kitchen & Cleaning", "name": "Original Creamer", "qty": 3, "unit": "boxes", "order": false, "notes": ""}, {"id": 24, "category": "Kitchen & Cleaning", "name": "Plastic Forks", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 25, "category": "Kitchen & Cleaning", "name": "Plastic Spoons", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 26, "category": "Kitchen & Cleaning", "name": "Plastic Knives", "qty": 1, "unit": "boxes", "order": false, "notes": ""}, {"id": 27, "category": "Kitchen & Cleaning", "name": "Paper Plates", "qty": 7, "unit": "sleeves", "order": false, "notes": ""}, {"id": 28, "category": "Kitchen & Cleaning", "name": "Paper Bowls", "qty": 2, "unit": "sleeves", "order": false, "notes": ""}, {"id": 29, "category": "Kitchen & Cleaning", "name": "Paper Cups", "qty": 2, "unit": "sleeves", "order": true, "notes": ""}, {"id": 30, "category": "First Aid", "name": "Alcohol Pads", "qty": 1, "unit": "boxes", "order": false, "notes": ""}, {"id": 31, "category": "First Aid", "name": "Antacids", "qty": 1, "unit": "bottles", "order": false, "notes": ""}, {"id": 32, "category": "First Aid", "name": "Antibiotic Ointment", "qty": 1, "unit": "tubes", "order": false, "notes": ""}, {"id": 33, "category": "First Aid", "name": "Band-aids", "qty": 1, "unit": "boxes", "order": false, "notes": ""}, {"id": 34, "category": "First Aid", "name": "Guaze Pads", "qty": 1, "unit": "boxes", "order": false, "notes": ""}, {"id": 35, "category": "First Aid", "name": "Cotton Squares", "qty": 1, "unit": "bags", "order": false, "notes": ""}, {"id": 36, "category": "First Aid", "name": "Cotton Swabs", "qty": 1, "unit": "boxes", "order": false, "notes": ""}, {"id": 37, "category": "Paper, Filing, and Envelopes", "name": "Letter Sized Copy Paper - 8.5x11", "qty": 5, "unit": "reams", "order": true, "notes": ""}, {"id": 38, "category": "Paper, Filing, and Envelopes", "name": "Legal Sized Copy Paper - 8.5x14", "qty": 5, "unit": "reams", "order": true, "notes": ""}, {"id": 39, "category": "Paper, Filing, and Envelopes", "name": "Ledger Copy Paper - 8.5x17", "qty": 6, "unit": "reams", "order": false, "notes": ""}, {"id": 40, "category": "Paper, Filing, and Envelopes", "name": "#10 Double-Window Envelopes", "qty": 4, "unit": "boxes", "order": true, "notes": ""}, {"id": 41, "category": "Paper, Filing, and Envelopes", "name": "#10 No Window Envelopes", "qty": 6, "unit": "boxes", "order": false, "notes": ""}, {"id": 42, "category": "Paper, Filing, and Envelopes", "name": "Address Labels", "qty": 3, "unit": "boxes", "order": false, "notes": ""}, {"id": 43, "category": "Paper, Filing, and Envelopes", "name": "Clasp Envelopes 12\" x 15\"", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 44, "category": "Paper, Filing, and Envelopes", "name": "Clasp Envelopes 9\" x 12\"", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 45, "category": "Paper, Filing, and Envelopes", "name": "Clasp Envelopes 6\" x 9\"", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 46, "category": "Paper, Filing, and Envelopes", "name": "Manila File Folders", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 47, "category": "Paper, Filing, and Envelopes", "name": "Hanging File Folders", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 48, "category": "Paper, Filing, and Envelopes", "name": "Shredder Lubricant", "qty": 2, "unit": "units", "order": false, "notes": ""}, {"id": 49, "category": "Toner", "name": "1. Postage Printer - IX-357 Quadient", "qty": "NA", "unit": "cartridge", "order": false, "notes": ""}, {"id": 50, "category": "Toner", "name": "2. Collections Cyan- LC3037C", "qty": 2, "unit": "cartridge", "order": false, "notes": ""}, {"id": 51, "category": "Toner", "name": "2. Collections Magenta - LC3037M", "qty": 2, "unit": "cartridge", "order": false, "notes": ""}, {"id": 52, "category": "Toner", "name": "2. Collections Yellow - LC3037Y", "qty": 3, "unit": "cartridge", "order": false, "notes": ""}, {"id": 53, "category": "Toner", "name": "2. Collections Black - LC3037BK", "qty": 2, "unit": "cartridge", "order": false, "notes": ""}, {"id": 54, "category": "Toner", "name": "3. Collections 2- Laser JetPro - HP 87X", "qty": 2, "unit": "cartridge", "order": false, "notes": ""}, {"id": 55, "category": "Toner", "name": "4. Payroll 1 - Laser Jet - MICR", "qty": 3, "unit": "cartridge", "order": false, "notes": ""}, {"id": 56, "category": "Toner", "name": "5. Payroll 2- Brother - TN760", "qty": 1, "unit": "cartridge", "order": false, "notes": ""}, {"id": 57, "category": "Toner", "name": "5. Payroll 2- Brother - DR730", "qty": 1, "unit": "cartridge", "order": false, "notes": ""}, {"id": 58, "category": "Toner", "name": "6. Leah - Laser Jet P2035 - HP 05A", "qty": 1, "unit": "cartridge", "order": false, "notes": ""}, {"id": 59, "category": "Toner", "name": "7. Alisha - Check Scanner - Canon 245", "qty": 1, "unit": "cartridge", "order": false, "notes": ""}, {"id": 60, "category": "Toner", "name": "8. HR - Cyan - TN299", "qty": 1, "unit": "cartridge", "order": false, "notes": ""}, {"id": 61, "category": "Toner", "name": "8. HR - Magenta - TN229", "qty": 1, "unit": "cartridge", "order": false, "notes": ""}, {"id": 62, "category": "Toner", "name": "8. HR - Yellow - TN229", "qty": 1, "unit": "cartridge", "order": false, "notes": ""}, {"id": 63, "category": "Toner", "name": "8. HR - Black - TN229", "qty": 0, "unit": "cartridge", "order": true, "notes": ""}, {"id": 64, "category": "Toner", "name": "9. Sandi - Cyan- 281C", "qty": 2, "unit": "cartridge", "order": false, "notes": ""}, {"id": 65, "category": "Toner", "name": "9. Sandi - Magenta - 281M", "qty": 2, "unit": "cartridge", "order": false, "notes": ""}, {"id": 66, "category": "Toner", "name": "9. Sandi - Yellow - 281Y", "qty": 2, "unit": "cartridge", "order": false, "notes": ""}, {"id": 67, "category": "Toner", "name": "9. Sandi - Black - 281BK", "qty": 2, "unit": "cartridge", "order": false, "notes": ""}, {"id": 68, "category": "Toner", "name": "9. Sandi - XL Black - 280-XL", "qty": 1, "unit": "cartridge", "order": false, "notes": ""}, {"id": 69, "category": "Toner", "name": "10.Shelley - Black - LC506", "qty": 1, "unit": "cartridge", "order": false, "notes": ""}, {"id": 70, "category": "Toner", "name": "10. Shelley - Cyan - LC506", "qty": 1, "unit": "cartridge", "order": false, "notes": ""}, {"id": 71, "category": "Toner", "name": "10. Shelley - Magenta -LC506", "qty": 1, "unit": "cartridge", "order": false, "notes": ""}, {"id": 72, "category": "Toner", "name": "10. Shelley - Yellow -LC506", "qty": 1, "unit": "cartridge", "order": false, "notes": ""}, {"id": 73, "category": "Toner", "name": "11. Julie - LC401XL C", "qty": 3, "unit": "cartridge", "order": false, "notes": ""}, {"id": 74, "category": "Toner", "name": "11. Julie - LC401XL M", "qty": 3, "unit": "cartridge", "order": false, "notes": ""}, {"id": 75, "category": "Toner", "name": "11. Julie - LC401XL Y", "qty": 3, "unit": "cartridge", "order": false, "notes": ""}, {"id": 76, "category": "Toner", "name": "11. Julie - LC401XL BK", "qty": 3, "unit": "cartridge", "order": false, "notes": ""}, {"id": 77, "category": "Toner", "name": "12. Austin PM - Black - TN229 BK", "qty": 2, "unit": "cartridge", "order": false, "notes": ""}, {"id": 78, "category": "Toner", "name": "12. Austin PM - Cyan - TN229", "qty": 1, "unit": "cartridge", "order": false, "notes": ""}, {"id": 79, "category": "Toner", "name": "12. Austin PM - Magenta- TN229", "qty": 1, "unit": "cartridge", "order": false, "notes": ""}, {"id": 80, "category": "Toner", "name": "12. Austin PM - Yellow - TN229", "qty": 1, "unit": "cartridge", "order": false, "notes": ""}, {"id": 81, "category": "Consumable Supplies", "name": "Binder Clips - Small", "qty": 3, "unit": "boxes", "order": false, "notes": ""}, {"id": 82, "category": "Consumable Supplies", "name": "Binder Clips - Medium", "qty": 7, "unit": "boxes", "order": false, "notes": ""}, {"id": 83, "category": "Consumable Supplies", "name": "Binder Clips - Large", "qty": 5, "unit": "clips", "order": false, "notes": ""}, {"id": 84, "category": "Consumable Supplies", "name": "Paper Clips", "qty": 12, "unit": "boxes", "order": false, "notes": ""}, {"id": 85, "category": "Consumable Supplies", "name": "Staples", "qty": 8, "unit": "boxes", "order": false, "notes": ""}, {"id": 86, "category": "Consumable Supplies", "name": "Batteries - AAA", "qty": 10, "unit": "boxes", "order": false, "notes": ""}, {"id": 87, "category": "Consumable Supplies", "name": "Batteries - AA", "qty": 10, "unit": "boxes", "order": false, "notes": ""}, {"id": 88, "category": "Consumable Supplies", "name": "#64 Rubber Bands", "qty": 1, "unit": "bags", "order": false, "notes": ""}, {"id": 89, "category": "Consumable Supplies", "name": "Highlighters", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 90, "category": "Consumable Supplies", "name": "White Board Markers", "qty": 5, "unit": "boxes", "order": false, "notes": ""}, {"id": 91, "category": "Consumable Supplies", "name": "White Board Eraser", "qty": 2, "unit": "bottles", "order": false, "notes": ""}, {"id": 92, "category": "Consumable Supplies", "name": "Sticky Notes", "qty": 10, "unit": "pads", "order": false, "notes": ""}, {"id": 93, "category": "Consumable Supplies", "name": "Sticky Notes - Lined", "qty": 6, "unit": "pads", "order": false, "notes": ""}, {"id": 94, "category": "Consumable Supplies", "name": "Note Pads - Letter Sized", "qty": 11, "unit": "pads", "order": false, "notes": ""}, {"id": 95, "category": "Consumable Supplies", "name": "Note Pads - 5\" x 8\"", "qty": 6, "unit": "pads", "order": false, "notes": ""}, {"id": 96, "category": "Consumable Supplies", "name": "Sheet Protectors 8.5x11", "qty": 1, "unit": "boxes", "order": false, "notes": ""}, {"id": 97, "category": "Consumable Supplies", "name": "Pens - Black", "qty": 1, "unit": "boxes", "order": false, "notes": ""}, {"id": 98, "category": "Consumable Supplies", "name": "Pens - Blue", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 99, "category": "Consumable Supplies", "name": "Pens - Red", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 100, "category": "Consumable Supplies", "name": "Mechanical Pencils", "qty": 2, "unit": "boxes", "order": false, "notes": ""}, {"id": 101, "category": "Consumable Supplies", "name": "Invisible Tape", "qty": 10, "unit": "rolls", "order": false, "notes": ""}, {"id": 102, "category": "Consumable Supplies", "name": "Packing Tape", "qty": 2, "unit": "rolls", "order": false, "notes": ""}, {"id": 103, "category": "Consumable Supplies", "name": "Keyboard Cleaner", "qty": 4, "unit": "cans", "order": false, "notes": ""}, {"id": 104, "category": "Consumable Supplies", "name": "Correction Tape", "qty": 9, "unit": "rolls", "order": false, "notes": ""}, {"id": 105, "category": "Consumable Supplies", "name": "Fingertip Moistener", "qty": 5, "unit": "units", "order": false, "notes": ""}, {"id": 106, "category": "Consumable Supplies", "name": "Kleenex Tissues", "qty": 8, "unit": "boxes", "order": false, "notes": ""}, {"id": 107, "category": "Desk Supplies", "name": "Tape Dispensers", "qty": 3, "unit": "units", "order": false, "notes": ""}, {"id": 108, "category": "Desk Supplies", "name": "Scissors", "qty": 3, "unit": "units", "order": false, "notes": ""}, {"id": 109, "category": "Desk Supplies", "name": "Staplers", "qty": 5, "unit": "units", "order": false, "notes": ""}, {"id": 110, "category": "Desk Supplies", "name": "Staple Removers", "qty": 6, "unit": "units", "order": false, "notes": ""}, {"id": 111, "category": "Desk Supplies", "name": "Mesh Pencil Holders", "qty": 4, "unit": "units", "order": false, "notes": ""}, {"id": 112, "category": "Desk Supplies", "name": "Letter Openers", "qty": 6, "unit": "units", "order": false, "notes": ""}, {"id": 113, "category": "Desk Supplies", "name": "Mouse Pads", "qty": 4, "unit": "units", "order": false, "notes": ""}, {"id": 114, "category": "Desk Supplies", "name": "Calculator", "qty": 4, "unit": "units", "order": false, "notes": ""}, {"id": 116, "category": "Other (not on Amazon)", "name": "FedEx Envelopes", "qty": 10, "unit": "packs", "order": false, "notes": ""}, {"id": 117, "category": "Other (not on Amazon)", "name": "CSI Logo Envelopes", "qty": 1, "unit": "boxes", "order": false, "notes": ""}, {"id": 118, "category": "Other (not on Amazon)", "name": "CSI Logo Labels", "qty": 1, "unit": "boxes", "order": false, "notes": ""}, {"id": 119, "category": "Other (not on Amazon)", "name": "Mail date stamp ink - Red and Blue", "qty": 2, "unit": "Bottles", "order": false, "notes": ""}, {"id": 120, "category": "Other (not on Amazon)", "name": "Priority Mail Envelopes", "qty": 6, "unit": "envelopes", "order": false, "notes": ""}];
 let items; try{items=JSON.parse(localStorage.getItem('csiInventory')||'null')||defaults}catch(e){items=defaults}
 const save=()=>localStorage.setItem('csiInventory',JSON.stringify(items));
-const cats=[...new Set(items.map(x=>x.category))]; const filter=document.getElementById('filter');
-cats.forEach(c=>{let o=document.createElement('option');o.value=c;o.textContent=c;filter.appendChild(o)});
-function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+// One-time update: Water Jugs are no longer part of the inventory.
+if(!localStorage.getItem('csiInventory_manage_v1')){items=items.filter(x=>String(x.name).trim().toLowerCase()!=='water jugs');save();localStorage.setItem('csiInventory_manage_v1','1')}
+const filter=document.getElementById('filter');
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function rebuildCategories(){const current=filter.value;const cats=[...new Set(items.map(x=>x.category).filter(Boolean))].sort((a,b)=>a.localeCompare(b));filter.innerHTML='<option value="all">All categories</option>'+cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');if(cats.includes(current))filter.value=current;document.getElementById('categoryList').innerHTML=cats.map(c=>`<option value="${esc(c)}"></option>`).join('')}
 function render(){
  let q=document.getElementById('search').value.toLowerCase(), f=filter.value, only=document.getElementById('only').checked;
  let shown=items.filter(x=>(!q||x.name.toLowerCase().includes(q))&&(f==='all'||x.category===f)&&(!only||x.order));
- document.getElementById('total').textContent=items.length; document.getElementById('needed').textContent=items.filter(x=>x.order).length;
+ document.getElementById('total').textContent=items.length;document.getElementById('needed').textContent=items.filter(x=>x.order).length;
  let groups=[...new Set(shown.map(x=>x.category))];
- document.getElementById('list').innerHTML=groups.map(c=>`<h2 class="cat">${esc(c)}</h2>`+shown.filter(x=>x.category===c).map(x=>`<div class="item"><div class="row"><div class="name">${esc(x.name)}<div class="meta">${esc(x.unit)}</div></div><input class="qty" data-id="${x.id}" data-type="qty" value="${esc(x.qty)}" aria-label="Quantity for ${esc(x.name)}"><label class="order ${x.order?'yes':''}"><input type="checkbox" data-id="${x.id}" data-type="order" ${x.order?'checked':''}> Order?</label></div><input class="notes" data-id="${x.id}" data-type="notes" value="${esc(x.notes||'')}" placeholder="Notes / what is needed…"></div>`).join('')).join('');
+ document.getElementById('list').innerHTML=groups.map(c=>`<h2 class="cat">${esc(c)}</h2>`+shown.filter(x=>x.category===c).map(x=>`<div class="item"><div class="row"><div class="name">${esc(x.name)}<div class="meta">${esc(x.unit)}</div></div><input class="qty" data-id="${x.id}" data-type="qty" value="${esc(x.qty)}" aria-label="Quantity for ${esc(x.name)}"><label class="order ${x.order?'yes':''}"><input type="checkbox" data-id="${x.id}" data-type="order" ${x.order?'checked':''}> Order?</label></div><input class="notes" data-id="${x.id}" data-type="notes" value="${esc(x.notes||'')}" placeholder="Notes / what is needed…"><div class="item-actions"><button type="button" class="secondary small" data-action="edit" data-id="${x.id}">✏️ Edit Item</button><button type="button" class="danger small" data-action="remove" data-id="${x.id}">🗑 Remove</button></div></div>`).join('')).join('');
 }
-document.getElementById('list').addEventListener('change',e=>{let x=items.find(i=>i.id==e.target.dataset.id);if(!x)return;if(e.target.dataset.type==='order')x.order=e.target.checked;else if(e.target.dataset.type==='qty')x.qty=e.target.value;else if(e.target.dataset.type==='notes')x.notes=e.target.value;save();render()});
-document.getElementById('list').addEventListener('input',e=>{if(e.target.dataset.type==='notes'){let x=items.find(i=>i.id==e.target.dataset.id);x.notes=e.target.value;save()}});
-document.getElementById('search').addEventListener('input',render); filter.addEventListener('change',render); document.getElementById('only').addEventListener('change',render);
-document.getElementById('print').addEventListener('click',()=>window.print());
+function resetForm(){document.getElementById('editId').value='';document.getElementById('itemName').value='';document.getElementById('itemCategory').value='';document.getElementById('itemQty').value='0';document.getElementById('itemUnit').value='';document.getElementById('formTitle').textContent='Add a new inventory item';document.getElementById('saveItem').textContent='+ Add Item';document.getElementById('cancelEdit').classList.add('hidden')}
+function openManager(){document.body.classList.add('manage-mode');document.getElementById('manager').classList.remove('hidden');document.getElementById('manage').textContent='⚙️ Managing List…'}
+function closeManager(){document.body.classList.remove('manage-mode');document.getElementById('manager').classList.add('hidden');document.getElementById('manage').textContent='⚙️ Manage List';resetForm()}
+document.getElementById('manage').addEventListener('click',()=>document.body.classList.contains('manage-mode')?closeManager():openManager());document.getElementById('closeManage').addEventListener('click',closeManager);document.getElementById('cancelEdit').addEventListener('click',resetForm);
+document.getElementById('itemForm').addEventListener('submit',e=>{e.preventDefault();const id=document.getElementById('editId').value;const name=document.getElementById('itemName').value.trim(),category=document.getElementById('itemCategory').value.trim(),qty=document.getElementById('itemQty').value.trim(),unit=document.getElementById('itemUnit').value.trim();if(!name||!category||!unit)return;if(id){const x=items.find(i=>String(i.id)===String(id));if(x){x.name=name;x.category=category;x.qty=qty;x.unit=unit}}else{const nextId=items.reduce((m,x)=>Math.max(m,Number(x.id)||0),0)+1;items.push({id:nextId,category,name,qty,unit,order:false,notes:''})}save();rebuildCategories();render();resetForm();document.getElementById('toast').textContent=id?'Item updated ✓':'New item added ✓';setTimeout(()=>document.getElementById('toast').textContent='',2500)});
+document.getElementById('list').addEventListener('click',e=>{const b=e.target.closest('button[data-action]');if(!b)return;const x=items.find(i=>String(i.id)===String(b.dataset.id));if(!x)return;if(b.dataset.action==='remove'){if(confirm(`Remove “${x.name}” from the inventory list?`)){items=items.filter(i=>String(i.id)!==String(x.id));save();rebuildCategories();render();document.getElementById('toast').textContent='Item removed ✓';setTimeout(()=>document.getElementById('toast').textContent='',2500)}}else if(b.dataset.action==='edit'){openManager();document.getElementById('editId').value=x.id;document.getElementById('itemName').value=x.name;document.getElementById('itemCategory').value=x.category;document.getElementById('itemQty').value=x.qty;document.getElementById('itemUnit').value=x.unit;document.getElementById('formTitle').textContent='Edit inventory item';document.getElementById('saveItem').textContent='Save Changes';document.getElementById('cancelEdit').classList.remove('hidden');document.getElementById('manager').scrollIntoView({behavior:'smooth',block:'start'})}});
+document.getElementById('list').addEventListener('change',e=>{let x=items.find(i=>String(i.id)===String(e.target.dataset.id));if(!x)return;if(e.target.dataset.type==='order')x.order=e.target.checked;else if(e.target.dataset.type==='qty')x.qty=e.target.value;else if(e.target.dataset.type==='notes')x.notes=e.target.value;save();render()});
+document.getElementById('list').addEventListener('input',e=>{if(e.target.dataset.type==='notes'){let x=items.find(i=>String(i.id)===String(e.target.dataset.id));if(x){x.notes=e.target.value;save()}}});
+document.getElementById('search').addEventListener('input',render);filter.addEventListener('change',render);document.getElementById('only').addEventListener('change',render);document.getElementById('print').addEventListener('click',()=>window.print());
 function dates(){let s=localStorage.getItem('csiLastChecked');if(s){let d=new Date(s+'T12:00:00'),n=new Date(d);n.setDate(n.getDate()+14);document.getElementById('last').textContent=d.toLocaleDateString();document.getElementById('next').textContent='Next check: '+n.toLocaleDateString()}}
 document.getElementById('finish').addEventListener('click',()=>{let d=new Date(),s=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');localStorage.setItem('csiLastChecked',s);dates();document.getElementById('toast').textContent='Inventory check saved ✓';setTimeout(()=>document.getElementById('toast').textContent='',3000)});
-dates();render();
+rebuildCategories();dates();render();
 </script></body></html>
